@@ -351,6 +351,12 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;
 .ptile{position:absolute;inset:0;border-radius:12%;background-repeat:no-repeat;
   box-shadow:inset 0 0 0 2px rgba(255,255,255,.55),inset 0 -4px 0 rgba(0,0,0,.14),0 3px 0 rgba(0,0,0,.16);transition:border-radius .5s,box-shadow .5s}
 .tray.whole .ptile{border-radius:0;box-shadow:none}
+/* small number in the top-right corner of each picture piece */
+.ptag{position:absolute;top:6%;right:6%;z-index:3;min-width:calc(var(--T)*.24);height:calc(var(--T)*.24);padding:0 calc(var(--T)*.05);box-sizing:border-box;
+  display:grid;place-items:center;border-radius:99px;pointer-events:none;
+  background:rgba(255,255,255,.88);color:#4a2b4f;font:700 calc(var(--T)*.15)/1 var(--font-ui);font-variant-numeric:tabular-nums;
+  box-shadow:0 1px 3px rgba(40,10,50,.3);transition:opacity .3s}
+.tray.whole .ptag{opacity:0}
 .tray.whole .tile{transition:transform .5s cubic-bezier(.3,1.2,.5,1)}
 .tile.last{opacity:0;scale:.6;transition:opacity .35s,scale .45s cubic-bezier(.3,1.6,.5,1)}
 .tile.last.in{opacity:1;scale:1}
@@ -735,6 +741,7 @@ function build(){
       const f=document.createElement('div'); f.className='ptile';
       f.style.backgroundImage=`url(${picUrl(G.pic)})`; f.style.backgroundSize=`${B.C*T}px ${B.R*T}px`;
       f.style.backgroundPosition=`${-(hc*T+o)}px ${-(hr*T+o)}px`; el.append(f); f.dataset.hc=hc; f.dataset.hr=hr;
+      if (v<B.n){ const tag=document.createElement('span'); tag.className='ptag'; tag.textContent=v; el.append(tag); }
     } else {
       el.append(padEl(v, rowsUsed.indexOf(hr), theme, rowsUsed.length));
     }
