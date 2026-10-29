@@ -615,7 +615,7 @@ function scramble(B, R){
   return t;
 }
 // time goals in seconds, scaled by how scrambled the board is
-function goalFor(lb){ const r=t=>Math.round(t/5)*5; return {three: r(lb*2.5+15), two: r(lb*5+30)}; }
+function goalFor(B){ const r=t=>Math.round(t/5)*5, three=r(25*Math.pow(B.n/9,1.5)); return {three, two: three*2}; }   // 3x3 = 25s; bigger boards grow with the work
 const fmt = sec => { sec=Math.floor(sec); return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); };
 function levelSpec(n){
   if (n<=2) return 'sq3';
@@ -720,7 +720,7 @@ function renderPics(){
 /* ---------- start ---------- */
 function startLevel(n){
   const shape=levelSpec(n), P=genPuzzle(shape, n);
-  begin({kind:'num', n, ...P, goal:goalFor(P.lb)});
+  begin({kind:'num', n, ...P, goal:goalFor(P.B)});
   $('lvlTxt').textContent=`LEVEL ${n}`;
   const tips = {1:'Tap a tile next to the gap to slide it.', 2:'Tap a tile further along the row to push them all at once.', 3:'Bigger board! Finish the top row first, then the next.', 7:'Rounded tray: the corners are blocked.'};
   const shapeTip = {heart5:'A heart-shaped tray!', cross5:'A post sits in the middle. Slide around it.', step4:'A stepped tray: the bottom corner is blocked.', round5:'Rounded tray: the corners are blocked.'};
@@ -728,7 +728,7 @@ function startLevel(n){
 }
 function startPic(p, size){
   const P=genPuzzle('sq'+size, Math.floor(Math.random()*1e9));
-  begin({kind:'pic', pic:p, size, ...P, goal:goalFor(P.lb)});
+  begin({kind:'pic', pic:p, size, ...P, goal:goalFor(P.B)});
   $('lvlTxt').textContent=`PICTURE ${Math.min(picDone.length+1,PICS.length)} OF ${PICS.length} · ${size}×${size}`;
   setHint('Hold the eye to see the finished picture.');
 }
