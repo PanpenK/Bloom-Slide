@@ -399,6 +399,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;
 .pic-card .st svg{width:18px;height:18px}
 .pic-card .badge{position:absolute;right:12px;top:12px;padding:4px 8px;border-radius:99px;background:linear-gradient(180deg,#8ef07a,#3fbf3a);color:#fff;font:400 13px/1 var(--font-display);box-shadow:0 0 0 2px #fff}
 .pic-card .badge.none{display:none}
+.pic-head{grid-column:1/-1;margin-top:6px}
 .pic-note{grid-column:1/-1;margin:2px 0 0;font-size:13px;text-align:center;opacity:.85}
 </style>
 
@@ -496,15 +497,25 @@ const THEMES = [
     art:'radial-gradient(circle,rgba(255,255,255,.55) 0 1.2px,transparent 1.8px),radial-gradient(circle,rgba(255,255,255,.25) 0 .9px,transparent 1.5px)', artSize:'46px 46px,23px 31px'},
 ];
 const PICS = [
-  {id:'bakery', name:'Kitty Bakery'},
-  {id:'reef',   name:'Under the Sea'},
-  {id:'candy',  name:'Candy Land'},
-  {id:'picnic', name:'Forest Picnic'},
-  {id:'space',  name:'Moonlight Village'},
-  {id:'pirate', name:'Pirate Cove'},
-  {id:'garden', name:'Flower Garden'},
-  {id:'winter', name:'Winter Wonderland'},
-]
+  {id:'px_bakery_village_square', name:'Village Square', pack:'Cozy Pixel'},
+  {id:'px_sunset_lake_dock', name:'Sunset Dock', pack:'Cozy Pixel'},
+  {id:'px_sunflower_farm', name:'Sunflower Farm', pack:'Cozy Pixel'},
+  {id:'px_forest_waterfall', name:'Forest Falls', pack:'Cozy Pixel'},
+  {id:'px_lantern_festival', name:'Lantern Festival', pack:'Cozy Pixel'},
+  {id:'px_seaside_lighthouse', name:'Seaside Lighthouse', pack:'Cozy Pixel'},
+  {id:'px_autumn_bridge', name:'Autumn Bridge', pack:'Cozy Pixel'},
+  {id:'px_snowy_cabin', name:'Snowy Cabin', pack:'Cozy Pixel'},
+  {id:'px_crystal_mine', name:'Crystal Mine', pack:'Cozy Pixel'},
+  {id:'px_cherry_blossom_river', name:'Cherry Blossom River', pack:'Cozy Pixel'},
+  {id:'bakery', name:'Kitty Bakery', pack:'Kawaii Worlds'},
+  {id:'reef', name:'Under the Sea', pack:'Kawaii Worlds'},
+  {id:'candy', name:'Candy Land', pack:'Kawaii Worlds'},
+  {id:'picnic', name:'Forest Picnic', pack:'Kawaii Worlds'},
+  {id:'space', name:'Moonlight Village', pack:'Kawaii Worlds'},
+  {id:'pirate', name:'Pirate Cove', pack:'Kawaii Worlds'},
+  {id:'garden', name:'Flower Garden', pack:'Kawaii Worlds'},
+  {id:'winter', name:'Winter Wonderland', pack:'Kawaii Worlds'},
+];
 const TEXTURES = [['gloss','Glazed'],['matte','Clay'],['jelly','Gummy'],['frost','Frosted'],['pearl','Pearl'],['enamel','Enamel']];
 const K_TEX='bloomslide:texture';
 let tex = (()=>{ try{ return localStorage.getItem(K_TEX); }catch(e){ return null; } })(); if (!TEXTURES.some(x=>x[0]===tex)) tex='gloss';
@@ -652,7 +663,9 @@ function renderPics(){
   [[3,'EASY'],[4,'CLASSIC'],[5,'EXPERT']].forEach(([s,l])=>{ const b=document.createElement('button'); b.type='button'; b.className=s===picSize?'on':''; b.innerHTML=`${s} × ${s}<small>${l}</small>`;
     b.addEventListener('click',()=>{ picSize=s; store.set(K_PSIZE,String(s)); sfx('pick'); renderPics(); }); sz.append(b); });
   const g=$('picGrid'); g.innerHTML='';
+  let lastPack=null;
   PICS.forEach(p=>{
+    if (p.pack!==lastPack){ lastPack=p.pack; const h=document.createElement('div'); h.className='grid-head pic-head'; h.innerHTML=`<span class="ot lg">${p.pack}</span><small>${PICS.filter(x=>x.pack===p.pack).length} pictures</small>`; g.append(h); }
     const st=picStars[`${p.id}:${picSize}`]||0;
     const c=document.createElement('button'); c.type='button'; c.className='pic-card';
     const lines=[]; for (let k=1;k<picSize;k++){ const v=(k/picSize*100).toFixed(2); lines.push(`<line x1="${v}" y1="0" x2="${v}" y2="100"/><line x1="0" y1="${v}" x2="100" y2="${v}"/>`); }
