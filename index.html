@@ -406,6 +406,22 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;
 .pic-card .badge{position:absolute;right:12px;top:12px;padding:4px 8px;border-radius:99px;background:linear-gradient(180deg,#8ef07a,#3fbf3a);color:#fff;font:400 13px/1 var(--font-display);box-shadow:0 0 0 2px #fff}
 .pic-card .badge.none{display:none}
 .pic-head{grid-column:1/-1;margin-top:6px}
+.pic-prog{width:min(100%,440px);box-sizing:border-box;padding:14px 16px;border-radius:20px;background:rgba(255,255,255,.75);
+  box-shadow:0 0 0 2px rgba(255,255,255,.9),0 5px 0 rgba(90,60,150,.18),0 10px 16px rgba(0,0,0,.1);color:var(--p-ink);display:flex;flex-direction:column;gap:9px}
+.pic-prog .row{display:flex;justify-content:space-between;align-items:baseline;font:400 20px/1 var(--font-display)}
+.pic-prog .row small{font:700 13px/1 var(--font-ui);color:var(--p-sub)}
+.pic-prog .bar{height:12px;border-radius:99px;background:#efe4dc;box-shadow:inset 0 2px 3px rgba(0,0,0,.12);overflow:hidden}
+.pic-prog .bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(180deg,#8ef07a,#3fbf3a)}
+.pic-prog .gbtn{height:52px;font-size:20px}
+.pic-sizes{display:flex;flex-direction:column;gap:12px;width:min(100%,440px);margin:14px 0}
+.pic-sizes .gbtn{height:70px;border-radius:22px;display:flex;justify-content:space-between;padding:0 22px}
+.pic-sizes .gbtn .ot{font-size:28px}
+.pic-sizes .gbtn small{font:700 14px/1 var(--font-ui);opacity:.92}
+.pic-coll{display:grid;grid-template-columns:repeat(5,1fr);grid-auto-rows:min-content;gap:7px;width:min(100%,440px);overflow:auto;padding:2px 2px 20px;box-sizing:border-box;align-content:start}
+.pic-coll i{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 2px rgba(255,255,255,.7);display:grid;place-items:center;
+  font:400 18px/1 var(--font-display);color:rgba(120,90,140,.45);font-style:normal}
+.pic-coll i img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.pic-coll-h{width:min(100%,440px);display:flex;justify-content:space-between;align-items:baseline;margin:0 0 8px}
 .pic-note{grid-column:1/-1;margin:2px 0 0;font-size:13px;text-align:center;opacity:.85}
 </style>
 
@@ -456,8 +472,9 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;
       <div class="title ot lg">Pictures</div>
       <span class="spacer"></span>
     </div>
-    <div class="sizes" id="sizes" role="group" aria-label="Puzzle size"></div>
-    <div class="pic-grid" id="picGrid"></div>
+    <div class="pic-prog" id="picProg"></div>
+    <div class="pic-sizes" id="sizes" role="group" aria-label="Puzzle size"></div>
+    <div class="pic-coll" id="picGrid" aria-label="Revealed pictures"></div>
   </section>
 
   <section class="screen" id="scrGame" hidden>
@@ -503,6 +520,16 @@ const THEMES = [
     art:'radial-gradient(circle,rgba(255,255,255,.55) 0 1.2px,transparent 1.8px),radial-gradient(circle,rgba(255,255,255,.25) 0 .9px,transparent 1.5px)', artSize:'46px 46px,23px 31px'},
 ];
 const PICS = [
+  {id:'pt_clock_tower_village_square', name:'Clock Tower Square', pack:'Cozy Towns'},
+  {id:'pt_market_street', name:'Market Street', pack:'Cozy Towns'},
+  {id:'pt_seaside_harbor_town', name:'Harbor Town', pack:'Cozy Towns'},
+  {id:'pt_sunset_cafe_street', name:'Sunset Café', pack:'Cozy Towns'},
+  {id:'pt_town_hall_square', name:'Town Hall', pack:'Cozy Towns'},
+  {id:'pt_canal_bridge_town', name:'Canal Bridge', pack:'Cozy Towns'},
+  {id:'pt_lantern_festival_street', name:'Lantern Street', pack:'Cozy Towns'},
+  {id:'pt_snowy_christmas_town', name:'Christmas Town', pack:'Cozy Towns'},
+  {id:'pt_flower_covered_village_lane', name:'Flower Lane', pack:'Cozy Towns'},
+  {id:'pt_moonlit_canal_town', name:'Moonlit Canal', pack:'Cozy Towns'},
   {id:'px_bakery_village_square', name:'Village Square', pack:'Cozy Pixel'},
   {id:'px_sunset_lake_dock', name:'Sunset Dock', pack:'Cozy Pixel'},
   {id:'px_sunflower_farm', name:'Sunflower Farm', pack:'Cozy Pixel'},
@@ -619,6 +646,18 @@ const K_LVL='bloomslide:level', K_STARS='bloomslide:stars', K_PSTARS='bloomslide
 let level = Math.max(1, +store.get(K_LVL) || 1);
 let stars = store.json(K_STARS) || {}, picStars = store.json(K_PSTARS) || {};
 let picSize = [3,4,5].includes(+store.get(K_PSIZE)) ? +store.get(K_PSIZE) : 3;
+const K_DONE='bloomslide:picdone', K_CUR='bloomslide:piccur';
+let picDone = (store.json(K_DONE)||[]).filter(id=>PICS.some(p=>p.id===id)), picCur = store.get(K_CUR);
+const saveDeck = () => { store.set(K_DONE, JSON.stringify(picDone)); store.set(K_CUR, picCur||''); };
+// the picture you are working on stays the same until it is finished; then a random one you have not done yet
+function nextPic(){
+  const left = PICS.filter(p=>!picDone.includes(p.id));
+  if (!left.length) return null;
+  let p = left.find(x=>x.id===picCur);
+  if (!p){ p = left[Math.floor(Math.random()*left.length)]; picCur=p.id; saveDeck(); }
+  return p;
+}
+function restartDeck(){ picDone=[]; picCur=null; saveDeck(); }
 const K_BEST='bloomslide:best'; let best = store.json(K_BEST) || {};
 let soundOn = store.get(K_SND) !== '0', hapticsOn = store.get(K_HAP) !== '0';
 const starTotal = () => Object.values(stars).reduce((a,b)=>a+b,0) + Object.values(picStars).reduce((a,b)=>a+b,0);
@@ -660,27 +699,22 @@ function renderHome(){
   [...'SLIDE'].forEach((ch,k)=>t.append(padBox(ch,k,lw)));
   const sw=$('pillSwatch'); sw.innerHTML=''; [0,1,2,3].forEach(k=>sw.append(padBox('',k,17)));
   $('styleSub').textContent = `${theme.name} · ${TEXTURES.find(x=>x[0]===tex)[1]}`;
-  const pi=$('picIco'); pi.innerHTML=''; PICS.concat(PICS).slice(0,4).forEach(p=>{ const im=document.createElement('img'); im.src=picUrl(p,1); im.alt=''; pi.append(im); });
-  const solvedPics = PICS.filter(p=>[3,4,5].some(s=>picStars[`${p.id}:${s}`])).length;
-  $('picSub').textContent = `${PICS.length} pictures · ${solvedPics} solved`;
+  const pi=$('picIco'); pi.innerHTML=''; const shown=picDone.length ? picDone.slice(-4).map(id=>PICS.find(p=>p.id===id)) : [];
+  for (let k=0;k<4;k++){ const p=shown[k]; if (p){ const im=document.createElement('img'); im.src=picUrl(p,1); im.alt=''; pi.append(im); } else { const q=document.createElement('img'); q.alt=''; q.src='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#ffffff" fill-opacity=".45"/><text x="5" y="7.6" font-size="7" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">?</text></svg>'); pi.append(q); } }
+  $('picSub').textContent = `${picDone.length} of ${PICS.length} revealed`;
 }
 function renderPics(){
+  const n=picDone.length, N=PICS.length, all=n>=N;
+  const pr=$('picProg'); pr.innerHTML=`<div class="row"><span>${all?'All pictures revealed!':n+' of '+N+' revealed'}</span><small>${all?'Start over to play them again':'Solve one to reveal it'}</small></div><div class="bar"><i style="width:${Math.round(n/N*100)}%"></i></div>`;
+  if (all){ const b=document.createElement('button'); b.type='button'; b.className='gbtn orange'; b.innerHTML='<span class="ot">Start Over</span>'; b.addEventListener('click',()=>{ restartDeck(); sfx('pick'); renderPics(); }); pr.append(b); }
   const sz=$('sizes'); sz.innerHTML='';
-  [[3,'EASY'],[4,'CLASSIC'],[5,'EXPERT']].forEach(([s,l])=>{ const b=document.createElement('button'); b.type='button'; b.className=s===picSize?'on':''; b.innerHTML=`${s} × ${s}<small>${l}</small>`;
-    b.addEventListener('click',()=>{ picSize=s; store.set(K_PSIZE,String(s)); sfx('pick'); renderPics(); }); sz.append(b); });
+  [[3,'Easy','gbtn'],[4,'Classic','gbtn blue'],[5,'Expert','gbtn purple']].forEach(([k,l,c])=>{ const b=document.createElement('button'); b.type='button'; b.className=c; b.disabled=all;
+    b.innerHTML=`<span class="ot">${k} × ${k}</span><small>${l}</small>`; if (all) b.style.opacity=.5;
+    b.addEventListener('click',()=>{ const p=nextPic(); if (!p) return; picSize=k; store.set(K_PSIZE,String(k)); startPic(p,k); }); sz.append(b); });
   const g=$('picGrid'); g.innerHTML='';
-  let lastPack=null;
-  PICS.forEach(p=>{
-    if (p.pack!==lastPack){ lastPack=p.pack; const h=document.createElement('div'); h.className='grid-head pic-head'; h.innerHTML=`<span class="ot lg">${p.pack}</span><small>${PICS.filter(x=>x.pack===p.pack).length} pictures</small>`; g.append(h); }
-    const st=picStars[`${p.id}:${picSize}`]||0;
-    const c=document.createElement('button'); c.type='button'; c.className='pic-card';
-    const lines=[]; for (let k=1;k<picSize;k++){ const v=(k/picSize*100).toFixed(2); lines.push(`<line x1="${v}" y1="0" x2="${v}" y2="100"/><line x1="0" y1="${v}" x2="100" y2="${v}"/>`); }
-    c.innerHTML=`<div class="art"><img src="${picUrl(p,1)}" alt="" loading="lazy"><svg class="gridl" viewBox="0 0 100 100" preserveAspectRatio="none" stroke="rgba(255,255,255,.85)" stroke-width=".8">${lines.join('')}</svg></div>
-      <span class="badge ${st?'':'none'}">Solved</span><span class="nm">${p.name}</span><span class="st">${ICON_STAR(st>=1)}${ICON_STAR(st>=2)}${ICON_STAR(st>=3)}</span>`;
-    c.addEventListener('click',()=>startPic(p, picSize));
-    g.append(c);
-  });
-  const note=document.createElement('p'); note.className='pic-note'; note.textContent='Every shuffle is new, so you can replay any picture.'; g.append(note);
+  // revealed pictures first, the rest stay a mystery
+  PICS.filter(p=>picDone.includes(p.id)).forEach(p=>{ const i=document.createElement('i'); i.innerHTML=`<img src="${picUrl(p,1)}" alt="${p.name}" loading="lazy">`; g.append(i); });
+  for (let k=n;k<N;k++){ const i=document.createElement('i'); i.textContent='?'; g.append(i); }
 }
 
 /* ---------- start ---------- */
@@ -695,7 +729,7 @@ function startLevel(n){
 function startPic(p, size){
   const P=genPuzzle('sq'+size, Math.floor(Math.random()*1e9));
   begin({kind:'pic', pic:p, size, ...P, goal:goalFor(P.lb)});
-  $('lvlTxt').textContent=`${p.name.toUpperCase()} · ${size}×${size}`;
+  $('lvlTxt').textContent=`PICTURE ${Math.min(picDone.length+1,PICS.length)} OF ${PICS.length} · ${size}×${size}`;
   setHint('Hold the eye to see the finished picture.');
 }
 function setHint(s){ $('hint').textContent=s; $('hint').style.visibility = s ? 'visible' : 'hidden'; }
@@ -891,11 +925,17 @@ function win(){
   const starsHtml=`<div class="stars3" aria-label="${got} of 3 stars">${ICON_STAR(got>=1)}${ICON_STAR(got>=2)}${ICON_STAR(got>=3)}</div>`;
   if (G.kind==='pic'){
     const key=`${G.pic.id}:${G.size}`; picStars[key]=Math.max(picStars[key]||0,got); store.set(K_PSTARS, JSON.stringify(picStars));
-    const i=PICS.indexOf(G.pic), next=PICS[(i+1)%PICS.length];
-    showModal(overEl,{rays:true,ribbon:'Picture Done!',color:'green',
-      body:`${starsHtml}<p>${G.pic.name} in ${timeLine}</p><p class="mini" style="opacity:.8">Three stars at ${fmt(G.goal.three)} or faster</p>`,
-      buttons:[{label:'Next Picture',act:'next'},{label:'Shuffle Again',act:'again',color:'cream',small:true},{label:'Pictures',act:'pics',color:'cream',small:true}]},
-      {next:()=>startPic(next,G.size), again:()=>startPic(G.pic,G.size), pics:()=>{ closeModal(overEl); show('pics'); }});
+    if (!picDone.includes(G.pic.id)) picDone.push(G.pic.id); picCur=null; saveDeck();
+    const left=PICS.length-picDone.length, size=G.size;
+    const prog=`<p class="mini" style="opacity:.8">${picDone.length} of ${PICS.length} revealed</p>`;
+    if (left>0) showModal(overEl,{rays:true,ribbon:G.pic.name,color:'green',
+      body:`${starsHtml}<p>Solved in ${timeLine}</p>${prog}`,
+      buttons:[{label:'Next Picture',act:'next'},{label:'Pictures',act:'pics',color:'cream',small:true}]},
+      {next:()=>startPic(nextPic(),size), pics:()=>{ closeModal(overEl); show('pics'); }});
+    else showModal(overEl,{rays:true,ribbon:'All Revealed!',color:'green',
+      body:`${starsHtml}<p>${G.pic.name} in ${timeLine}</p><p>You finished all ${PICS.length} pictures!</p>`,
+      buttons:[{label:'Start Over',act:'again'},{label:'Home',act:'home',color:'cream',small:true}]},
+      {again:()=>{ restartDeck(); startPic(nextPic(),size); }, home:()=>{ closeModal(overEl); show('home'); }});
   } else {
     stars[G.n] = Math.max(stars[G.n]||0, got); store.set(K_STARS, JSON.stringify(stars));
     if (G.n>=level){ level=G.n+1; store.set(K_LVL,String(level)); }
