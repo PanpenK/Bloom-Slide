@@ -496,10 +496,15 @@ const THEMES = [
     art:'radial-gradient(circle,rgba(255,255,255,.55) 0 1.2px,transparent 1.8px),radial-gradient(circle,rgba(255,255,255,.25) 0 .9px,transparent 1.5px)', artSize:'46px 46px,23px 31px'},
 ];
 const PICS = [
-  {id:'gems', name:'Gem Garden'},
-  {id:'treasure', name:'Treasure Beach'},
-  {id:'crew', name:'Pirate Crew'},
-];
+  {id:'bakery', name:'Kitty Bakery'},
+  {id:'reef',   name:'Under the Sea'},
+  {id:'candy',  name:'Candy Land'},
+  {id:'picnic', name:'Forest Picnic'},
+  {id:'space',  name:'Moonlight Village'},
+  {id:'pirate', name:'Pirate Cove'},
+  {id:'garden', name:'Flower Garden'},
+  {id:'winter', name:'Winter Wonderland'},
+]
 const TEXTURES = [['gloss','Glazed'],['matte','Clay'],['jelly','Gummy'],['frost','Frosted'],['pearl','Pearl'],['enamel','Enamel']];
 const K_TEX='bloomslide:texture';
 let tex = (()=>{ try{ return localStorage.getItem(K_TEX); }catch(e){ return null; } })(); if (!TEXTURES.some(x=>x[0]===tex)) tex='gloss';
