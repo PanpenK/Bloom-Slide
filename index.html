@@ -458,7 +458,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;
       <button class="ibtn" id="pauseBtn" type="button" aria-label="Pause"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><rect x="6" y="5" width="4.2" height="14" rx="1.6"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.6"/></svg></button>
       <div class="hud-mid">
         <span class="pill cream lvl-pill"><span id="lvlTxt">LEVEL 1</span></span>
-        <div class="moves" id="movesBox"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="#a98bff" stroke="#fff" stroke-width="2"/><path d="M8 12h8m-3-3l3 3-3 3" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><small>MOVES</small><span id="movesTxt">0</span><em id="goalTxt"></em></div>
+        <div class="moves" id="movesBox"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8.5" fill="#a98bff" stroke="#fff" stroke-width="2"/><path d="M12 8.6V13l3 2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.5 2.8h5" stroke="#a98bff" stroke-width="2.6" stroke-linecap="round"/></svg><small>TIME</small><span id="movesTxt">0:00</span><em id="goalTxt"></em></div>
       </div>
       <span class="spacer"></span>
     </div>
@@ -570,7 +570,9 @@ function scramble(B, R){
   }
   return t;
 }
-function goalFor(lb){ return {three: Math.round(lb*3+10), two: Math.round(lb*5.5+20)}; }
+// time goals in seconds, scaled by how scrambled the board is
+function goalFor(lb){ const r=t=>Math.round(t/5)*5; return {three: r(lb*2.5+15), two: r(lb*5+30)}; }
+const fmt = sec => { sec=Math.floor(sec); return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); };
 function levelSpec(n){
   if (n<=2) return 'sq3';
   if (n<=4) return 'sq4';
@@ -600,13 +602,14 @@ const K_LVL='bloomslide:level', K_STARS='bloomslide:stars', K_PSTARS='bloomslide
 let level = Math.max(1, +store.get(K_LVL) || 1);
 let stars = store.json(K_STARS) || {}, picStars = store.json(K_PSTARS) || {};
 let picSize = [3,4,5].includes(+store.get(K_PSIZE)) ? +store.get(K_PSIZE) : 3;
+const K_BEST='bloomslide:best'; let best = store.json(K_BEST) || {};
 let soundOn = store.get(K_SND) !== '0', hapticsOn = store.get(K_HAP) !== '0';
 const starTotal = () => Object.values(stars).reduce((a,b)=>a+b,0) + Object.values(picStars).reduce((a,b)=>a+b,0);
 
 /* ---------- state ---------- */
 const $ = id => document.getElementById(id);
 const board=$('board'), stage=$('stage'), fxEl=$('fx'), overEl=$('over'), pauseEl=$('pause');
-let G=null, done=false, screen='home', T=60, moves=0, tileEls={}, peekEl=null, picsReturn='home', stylesReturn='home';
+let G=null, done=false, screen='home', T=60, moves=0, elapsed=0, started=false, lastTick=0, tileEls={}, peekEl=null, picsReturn='home', stylesReturn='home';
 
 /* ---------- screens ---------- */
 function show(name){ screen=name; for (const [id,n] of [['scrHome','home'],['scrGame','game'],['scrStyles','styles'],['scrPics','pics']]) $(id).hidden = name!==n;
@@ -679,9 +682,9 @@ function startPic(p, size){
 function setHint(s){ $('hint').textContent=s; $('hint').style.visibility = s ? 'visible' : 'hidden'; }
 function begin(g){
   closeModal(overEl); closeModal(pauseEl);
-  G=g; done=false; moves=0; $('movesTxt').textContent='0';
-  $('goalTxt').innerHTML=`/ ${G.goal.three}`; $('movesBox').classList.remove('over');
-  $('goalTxt').title='Finish within this many moves for three stars';
+  G=g; done=false; moves=0; elapsed=0; started=false; $('movesTxt').textContent='0:00';
+  $('goalTxt').innerHTML=`/ ${fmt(G.goal.three)}`; $('movesBox').classList.remove('over');
+  $('goalTxt').title='Finish within this time for three stars';
   show('game'); build();
 }
 
@@ -761,8 +764,7 @@ function tapTile(v){
   // push: the tile nearest the gap moves first
   let g=gap;
   for (let k=path.length-1;k>=0;k--){ const i=path[k]; G.tiles[g]=G.tiles[i]; G.tiles[i]=0; g=i; }
-  moves+=path.length; $('movesTxt').textContent=moves;
-  if (moves>G.goal.three) $('movesBox').classList.add('over');
+  moves+=path.length; if (!started){ started=true; lastTick=performance.now(); }
   place(false);
   sfx('slide', path.length); buzz(5);
   if (isSolved(G.tiles)) solvedNow();
@@ -787,6 +789,7 @@ $('peekBtn').addEventListener('pointerdown', e=>{ e.preventDefault(); if (!done)
 for (const ev of ['pointerup','pointerleave','pointercancel']) $('peekBtn').addEventListener(ev, ()=>peekOn(false));
 
 function solvedNow(){
+  if (clockRunning()) elapsed+=performance.now()-lastTick; $('movesTxt').textContent=fmt(elapsed/1000);
   done=true;
   const last=tileEls[G.B.n];
   setTimeout(()=>{ if (last) last.classList.add('in'); sfx('reveal');
@@ -841,7 +844,7 @@ function openPause(){
   const pic = G.kind==='pic';
   showModal(pauseEl,{ribbon:'Paused',color:'blue',
     corner:`<div class="corners"><button class="ibtn ${hapticsOn?'':'orange'} corner" data-act="hap" type="button" aria-label="Vibration ${hapticsOn?'on':'off'}">${hap}</button><button class="ibtn ${soundOn?'':'orange'} corner" data-act="snd" type="button" aria-label="Sound ${soundOn?'on':'off'}">${snd}</button></div>`,
-    body:`<p>${pic?G.pic.name:'Level '+G.n} · ${moves} moves</p>`,
+    body:`<p>${pic?G.pic.name:'Level '+G.n} · ${fmt(elapsed/1000)}</p>`,
     buttons:[{label:'Resume',act:'resume'},{label:pic?'New Shuffle':'Restart Level',act:'restart',color:'cream',small:true},
       pic?{label:'Pictures',act:'pics',color:'cream',small:true}:{label:'Tile Styles',act:'styles',color:'cream',small:true},{label:'Home',act:'home',color:'cream',small:true}]},
     {resume:()=>closeModal(pauseEl),
@@ -860,27 +863,34 @@ $('goStyles').addEventListener('click', ()=>{ stylesReturn='home'; show('styles'
 $('stylesBack').addEventListener('click', ()=>{ if (stylesReturn==='game' && G){ show('game'); build(); } else show('home'); });
 
 function win(){
-  const got = moves<=G.goal.three ? 3 : moves<=G.goal.two ? 2 : 1;
+  const sec=elapsed/1000, got = sec<=G.goal.three ? 3 : sec<=G.goal.two ? 2 : 1;
+  const bk = G.kind==='pic' ? `${G.pic.id}:${G.size}` : 'L'+G.n, prevBest = best[bk];
+  const isBest = prevBest===undefined || sec<prevBest; if (isBest){ best[bk]=sec; store.set(K_BEST, JSON.stringify(best)); }
+  const timeLine = `${fmt(sec)}${isBest && prevBest!==undefined ? ' · New best!' : prevBest!==undefined ? ' · Best '+fmt(prevBest) : ''}`;
   sfx('win'); buzz([15,40,15,40,30]);
   const starsHtml=`<div class="stars3" aria-label="${got} of 3 stars">${ICON_STAR(got>=1)}${ICON_STAR(got>=2)}${ICON_STAR(got>=3)}</div>`;
   if (G.kind==='pic'){
     const key=`${G.pic.id}:${G.size}`; picStars[key]=Math.max(picStars[key]||0,got); store.set(K_PSTARS, JSON.stringify(picStars));
     const i=PICS.indexOf(G.pic), next=PICS[(i+1)%PICS.length];
     showModal(overEl,{rays:true,ribbon:'Picture Done!',color:'green',
-      body:`${starsHtml}<p>${G.pic.name} in ${moves} moves</p><p class="mini" style="opacity:.8">Three stars at ${G.goal.three} moves or fewer</p>`,
+      body:`${starsHtml}<p>${G.pic.name} in ${timeLine}</p><p class="mini" style="opacity:.8">Three stars at ${fmt(G.goal.three)} or faster</p>`,
       buttons:[{label:'Next Picture',act:'next'},{label:'Shuffle Again',act:'again',color:'cream',small:true},{label:'Pictures',act:'pics',color:'cream',small:true}]},
       {next:()=>startPic(next,G.size), again:()=>startPic(G.pic,G.size), pics:()=>{ closeModal(overEl); show('pics'); }});
   } else {
     stars[G.n] = Math.max(stars[G.n]||0, got); store.set(K_STARS, JSON.stringify(stars));
     if (G.n>=level){ level=G.n+1; store.set(K_LVL,String(level)); }
     showModal(overEl,{rays:true,ribbon:'Solved!',color:'green',
-      body:`${starsHtml}<p>Level ${G.n} in ${moves} moves</p><p class="mini" style="opacity:.8">Three stars at ${G.goal.three} moves or fewer</p>`,
+      body:`${starsHtml}<p>Level ${G.n} in ${timeLine}</p><p class="mini" style="opacity:.8">Three stars at ${fmt(G.goal.three)} or faster</p>`,
       buttons:[{label:'Next Level',act:'next'},{label:'Replay',act:'again',color:'cream',small:true},{label:'Home',act:'home',color:'cream',small:true}]},
       {next:()=>startLevel(G.n+1), again:()=>startLevel(G.n), home:()=>{ closeModal(overEl); show('home'); }});
   }
   confetti(overEl);
 }
 
+// the clock runs from the first slide, and stops while paused, finished or in the background
+function clockRunning(){ return G && started && !done && screen==='game' && pauseEl.hidden && overEl.hidden && !document.hidden; }
+setInterval(()=>{ const now=performance.now(); if (clockRunning()){ elapsed+=now-lastTick; const sec=elapsed/1000; $('movesTxt').textContent=fmt(sec); $('movesBox').classList.toggle('over', sec>G.goal.three); } lastTick=now; }, 200);
+document.addEventListener('visibilitychange', ()=>{ lastTick=performance.now(); });
 let rT=null;
 window.addEventListener('resize',()=>{ clearTimeout(rT); rT=setTimeout(()=>{ if (screen==='game' && G && !done) build(); },150); });
 
